@@ -77,7 +77,7 @@ jobs:
             ${{ env.IMAGE }}:latest
             ${{ env.IMAGE }}:${{ github.sha }}
       - name: Trivy - scan image (fails on fixable CRITICAL vulnerabilities)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.36.0
         with:
           image-ref: ${{ env.IMAGE }}:latest
           severity: CRITICAL
