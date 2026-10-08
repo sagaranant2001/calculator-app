@@ -1,0 +1,92 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  # ---- Gate 1: unit tests + minimum coverage ----
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Run unit tests (fails below 70% coverage)
+        run: pytest --cov=main --cov-report=xml --cov-fail-under=70
+      - name: Save coverage report for SonarQube
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage.xml
+
+  # ---- Gate 2: code + dependency security ----
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install scanners
+        run: pip install bandit pip-audit
+      - name: Bandit - scan code for insecure patterns
+        run: bandit -r main.py -ll
+      - name: pip-audit - scan dependencies for known vulnerabilities
+        run: pip-audit -r requirements.txt
+
+  # ---- Gate 3: SonarQube quality gate ----
+  sonar:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Get coverage report
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage
+      - name: SonarQube scan (fails if the quality gate fails)
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        with:
+          args: -Dsonar.qualitygate.wait=true
+
+  # ---- Build, scan image, push to Docker Hub (only if all gates passed) ----
+  docker:
+    needs: [test, security, sonar]
+    runs-on: ubuntu-latest
+    env:
+      IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/calculator-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image locally
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          push: false
+          tags: |
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ github.sha }}
+      - name: Trivy - scan image (fails on fixable CRITICAL vulnerabilities)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ env.IMAGE }}:latest
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Push image
+        run: docker push --all-tags ${{ env.IMAGE }}
