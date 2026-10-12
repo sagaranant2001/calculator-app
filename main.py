@@ -5,7 +5,7 @@ app = FastAPI(title="Calculator")
 
 @app.get("/")
 def home():
-    return {"message": "Calulator is running. Try/docs"}
+    return {"message": "Calculator API is running. Try /docs"}
 
 
 @app.get("/health")
@@ -14,18 +14,22 @@ def health():
 
 
 @app.get("/add")
-def add(a: float, b:float):
-    return {"result" : a+b}
+def add(a: float, b: float):
+    return {"result": a + b}
 
 
 @app.get("/subtract")
 def subtract(a: float, b: float):
-    return {"result": a-b}
+    return {"result": a - b}
+
+
+@app.get("/multiply")
+def multiply(a: float, b: float):
+    return {"result": a * b}
+
 
 @app.get("/divide")
 def divide(a: float, b: float):
     if b == 0:
         raise HTTPException(status_code=400, detail="Cannot divide by zero")
-
-    return {"result": a/b}
-    
+    return {"result": a / b}
