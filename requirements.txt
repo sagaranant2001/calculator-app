@@ -1,3 +1,24 @@
 fastapi==0.142.2
 uvicorn==0.54.0
 pandas
+
+
+# run sonarqube and cloudflare on separate powershells
+
+# run sonarqube command -:
+# cd C:\sonarqube\bin\windows-x86-64
+# StartSonar.bat
+
+
+# The Cloudflare Tunnel command written in your notebook is:
+# cd "C:\Users\Anant\Downloads"
+
+# .\cloudflared-windows-amd64.exe tunnel --url http://localhost:9000
+
+
+# What it does:
+# cd navigates to your Downloads folder.
+# cloudflared-windows-amd64.exe runs Cloudflare Tunnel.
+# tunnel --url http://localhost:9000 exposes your local application running on port 9000 through a public Cloudflare URL.
+# Before running it: Make sure your application is running at http://localhost:9000.
+# [12:09 pm, 15/10/2026] Anant Sagar: 
